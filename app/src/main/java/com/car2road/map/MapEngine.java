@@ -332,6 +332,7 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
                     accurencyCircle.setCenter(latLng);
                     accurencyCircle.setRadius(location.getAccuracy());
                 }
+                //blalba
 
                 if(circle==null) {
                     CircleOptions circleOptions = new CircleOptions();
