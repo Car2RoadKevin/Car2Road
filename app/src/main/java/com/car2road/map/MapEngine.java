@@ -29,14 +29,10 @@ import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
-import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.model.Circle;
 import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
-import com.google.android.gms.maps.model.MarkerOptions;
-import com.google.android.gms.maps.model.PolygonOptions;
-import com.google.android.gms.maps.model.VisibleRegion;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -50,78 +46,23 @@ import java.util.Observer;
 public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
     public static final int METER_TO_PIXEL = 4;
-
+    private final Location testLocation = createTestLocation();
     private MapActivity mapActivity;
-
     private SparseArray<Voiture> voitureSparseArray;
-
     private LocationManager locationManager;
-
     private GoogleMap map = null;
-
     private boolean hasSatellite;
-
-    private SensorManager sensorManager;
-
-    private Sensor accelerometer;
-
-    private Sensor magnetometer;
-
-    private GoogleApiClient googleApiClient;
-
-    private LocationRequest locationRequest = null;
-
-    private float[] lastAccelerometer = new float[3];
-    private float[] lastMagnetometer = new float[3];
-    private boolean lastAccelerometerSet = false;
-    private boolean lastMagnetometerSet = false;
-
-    private float[] mR = new float[9];
-    private float[] orientation = new float[3];
-
-    private SensorEventListener sensorEventListener = new SensorEventListener() {
-        @Override
-        public void onSensorChanged(SensorEvent event) {
-            if(event.sensor == accelerometer) {
-                System.arraycopy(event.values, 0, lastAccelerometer, 0, event.values.length);
-                lastAccelerometerSet = true;
-            } else if (event.sensor == magnetometer) {
-                System.arraycopy(event.values, 0, lastMagnetometer, 0, event.values.length);
-                lastMagnetometerSet = true;
-            }
-
-            if (lastAccelerometerSet && lastMagnetometerSet) {
-                SensorManager.getRotationMatrix(mR, null, lastAccelerometer, lastMagnetometer);
-                SensorManager.getOrientation(mR, orientation);
-                //Log.i(getClass().getName(), String.format("Orientation: %f, %f, %f",orientation[0], orientation[1], orientation[2]));
-
-                Location location = voitureSparseArray.get(0).getLocation();
-                location.setBearing((float)(orientation[0]*180/Math.PI));
-                //updateVehiclePosition(location);
-            }
-        }
-
-        @Override
-        public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-        }
-    };
-
     private LocationListener locationListener = new LocationListener() {
         @Override
         public void onLocationChanged(Location location) {
             Log.d(location.getProvider(), "Latitude : " + location.getLatitude() + ", longitude : " + location.getLongitude() + ", Bearing : " + location.getBearing() + ", Accurency : " + location.getAccuracy());
 
-            if(LocationManager.GPS_PROVIDER.equals(location.getProvider()))
-            {
-                if (location.hasBearing())
-                {
+            if (LocationManager.GPS_PROVIDER.equals(location.getProvider())) {
+                if (location.hasBearing()) {
                     Log.i(getClass().getName(), "Bearing : " + String.valueOf(location.getBearing()));
                 }
                 updateVehiclePosition(location);
-            }
-            else if (LocationManager.NETWORK_PROVIDER.equals(location.getProvider()) && !hasSatellite)
-            {
+            } else if (LocationManager.NETWORK_PROVIDER.equals(location.getProvider()) && !hasSatellite) {
                 updateVehiclePosition(location);
             }
 
@@ -139,26 +80,16 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
 
         @Override
         public void onProviderDisabled(String provider) {
-            if(LocationManager.GPS_PROVIDER.equals(provider))
-            {
+            if (LocationManager.GPS_PROVIDER.equals(provider)) {
                 createGpsDisabledAlert("Vous venez de désactiver le GPS. Veuillez le réactiver.");
             }
         }
     };
-
-    private com.google.android.gms.location.LocationListener locationListener2 = new com.google.android.gms.location.LocationListener() {
-        @Override
-        public void onLocationChanged(Location location) {
-            Log.d(location.getProvider(), "Latitude : " + location.getLatitude() + ", longitude : " + location.getLongitude() + ", Bearing : " + location.getBearing() + ", Accurency : " + location.getAccuracy());
-            updateVehiclePosition(location);
-        }
-    };
-
     private GpsStatus.Listener gpsListener = new GpsStatus.Listener() {
         @Override
         public void onGpsStatusChanged(int event) {
 
-            if(event == GpsStatus.GPS_EVENT_SATELLITE_STATUS && locationManager!=null) {
+            if (event == GpsStatus.GPS_EVENT_SATELLITE_STATUS && locationManager != null) {
 
                 GpsStatus gpsStatus = locationManager.getGpsStatus(null);
                 Iterator<GpsSatellite> it = gpsStatus.getSatellites().iterator();
@@ -175,8 +106,51 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
             }
         }
     };
+    private SensorManager sensorManager;
+    private Sensor accelerometer;
+    private Sensor magnetometer;
+    private GoogleApiClient googleApiClient;
+    private LocationRequest locationRequest = null;
+    private float[] lastAccelerometer = new float[3];
+    private float[] lastMagnetometer = new float[3];
+    private boolean lastAccelerometerSet = false;
+    private boolean lastMagnetometerSet = false;
+    private float[] mR = new float[9];
+    private float[] orientation = new float[3];
+    private SensorEventListener sensorEventListener = new SensorEventListener() {
+        @Override
+        public void onSensorChanged(SensorEvent event) {
+            if (event.sensor == accelerometer) {
+                System.arraycopy(event.values, 0, lastAccelerometer, 0, event.values.length);
+                lastAccelerometerSet = true;
+            } else if (event.sensor == magnetometer) {
+                System.arraycopy(event.values, 0, lastMagnetometer, 0, event.values.length);
+                lastMagnetometerSet = true;
+            }
 
-    private final Location testLocation = createTestLocation();
+            if (lastAccelerometerSet && lastMagnetometerSet) {
+                SensorManager.getRotationMatrix(mR, null, lastAccelerometer, lastMagnetometer);
+                SensorManager.getOrientation(mR, orientation);
+                //Log.i(getClass().getName(), String.format("Orientation: %f, %f, %f",orientation[0], orientation[1], orientation[2]));
+
+                Location location = voitureSparseArray.get(0).getLocation();
+                location.setBearing((float) (orientation[0] * 180 / Math.PI));
+                //updateVehiclePosition(location);
+            }
+        }
+
+        @Override
+        public void onAccuracyChanged(Sensor sensor, int accuracy) {
+            //Bachibouzouk
+        }
+    };
+    private com.google.android.gms.location.LocationListener locationListener2 = new com.google.android.gms.location.LocationListener() {
+        @Override
+        public void onLocationChanged(Location location) {
+            Log.d(location.getProvider(), "Latitude : " + location.getLatitude() + ", longitude : " + location.getLongitude() + ", Bearing : " + location.getBearing() + ", Accurency : " + location.getAccuracy());
+            updateVehiclePosition(location);
+        }
+    };
 
 
     MapEngine(MapActivity mapActivity)
@@ -211,6 +185,21 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
         initialiserSocketClient();
     }
 
+    private static Location createTestLocation() {
+        Location location = new Location(LocationManager.GPS_PROVIDER);
+        location.setAccuracy(100);
+        location.setLatitude(48.188035);
+        location.setLongitude(11.584547);
+        location.setTime(System.currentTimeMillis());
+        location.setElapsedRealtimeNanos(System.currentTimeMillis());
+
+        return location;
+    }
+
+    private static boolean isMockSettingOn(Context context) {
+        return !Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ALLOW_MOCK_LOCATION).equals("0");
+    }
+
     public SparseArray<Voiture> buildVoitureList()
     {
         Display ecran = mapActivity.getWindowManager().getDefaultDisplay();
@@ -219,23 +208,22 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
 
         voitureSparseArray = new SparseArray<>();
 
-        Voiture voitureCenter = new Voiture(mapActivity, new Location(LocationManager.GPS_PROVIDER), point.x / 2, point.y /2, 0);
+        Voiture voitureCenter = new Voiture(mapActivity, new Location(LocationManager.GPS_PROVIDER), point.x / 2, point.y / 2, 0);
         voitureSparseArray.put(0, voitureCenter);
 
-        if(isMockSettingOn(mapActivity))
-        {
+        if (isMockSettingOn(mapActivity)) {
             Location location = new Location(LocationManager.GPS_PROVIDER);
             Log.i(getClass().getName(), "HasBearing : " + location.hasBearing());
             location.setLatitude(48.188139);
             location.setLongitude(11.584568);
             location.setAccuracy(20);
-            voitureSparseArray.put(1, new Voiture(mapActivity, location,2000,2000,0));
+            voitureSparseArray.put(1, new Voiture(mapActivity, location, 2000, 2000, 0));
 
             location = new Location(LocationManager.GPS_PROVIDER);
             location.setLatitude(48.188039);
             location.setLongitude(11.585013);
             location.setAccuracy(30);
-            voitureSparseArray.put(2, new Voiture(mapActivity, location,2000,2000,0));
+            voitureSparseArray.put(2, new Voiture(mapActivity, location, 2000, 2000, 0));
         }
 
 
@@ -244,28 +232,22 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
 
     public void activateGPS()
     {
-        if(Debug.isDebuggerConnected() && isMockSettingOn(mapActivity))
-        {
+        if (Debug.isDebuggerConnected() && isMockSettingOn(mapActivity)) {
             setMockLocation();
         }
 
-        if(isGpsEnabled())
-        {
+        if (isGpsEnabled()) {
             //setGpsRequestLocationUpdates();
-        }
-        else
-        {
+        } else {
             createGpsDisabledAlert("Le GPS est inactif, veuillez l'activer ?");
         }
     }
 
-    private boolean isGpsEnabled()
-    {
+    private boolean isGpsEnabled() {
         return locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
     }
 
-    private void setGpsRequestLocationUpdates()
-    {
+    private void setGpsRequestLocationUpdates() {
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 100, 0, locationListener);
     }
 
@@ -296,31 +278,28 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
         mapActivity.startActivity(new Intent("android.settings.LOCATION_SOURCE_SETTINGS"));
     }
 
-    public void updateVehiclePosition(Location locationCenter)
-    {
+    public void updateVehiclePosition(Location locationCenter) {
         Log.i(this.getClass().getName(), "Position of vehicle will be updated");
         Voiture voitureCenter = voitureSparseArray.get(0);
         voitureCenter.setLocation(locationCenter);
 
         int size = voitureSparseArray.size();
-        for(int i=0;i<size;i++)
-        {
-            if(i!=voitureSparseArray.indexOfValue(voitureCenter))
-            {
+        for (int i = 0; i < size; i++) {
+            if (i != voitureSparseArray.indexOfValue(voitureCenter)) {
                 Voiture voiture = voitureSparseArray.valueAt(i);
                 float distance = locationCenter.distanceTo(voiture.getLocation());
                 double angle = locationCenter.getBearing() + locationCenter.bearingTo(voiture.getLocation()) * Math.PI / 180;
 
-                voiture.setX(voitureCenter.getX() + (int)(distance * Math.sin(angle))*METER_TO_PIXEL);
-                voiture.setY(voitureCenter.getY() - (int)(distance * Math.cos(angle))*METER_TO_PIXEL);
-                voiture.setAngle(voiture.getLocation().getBearing()-locationCenter.getBearing());
+                voiture.setX(voitureCenter.getX() + (int) (distance * Math.sin(angle)) * METER_TO_PIXEL);
+                voiture.setY(voitureCenter.getY() - (int) (distance * Math.cos(angle)) * METER_TO_PIXEL);
+                voiture.setAngle(voiture.getLocation().getBearing() - locationCenter.getBearing());
 
                 Location location = voiture.getLocation();
                 LatLng latLng = new LatLng(location.getLatitude(), location.getLongitude());
 
                 Circle circle = voiture.getCircle();
                 Circle accurencyCircle = voiture.getAccurencyCircle();
-                if(accurencyCircle==null) {
+                if (accurencyCircle == null) {
                     CircleOptions accurencyCircleOptions = new CircleOptions();
                     accurencyCircleOptions.center(latLng);
                     accurencyCircleOptions.strokeColor(0xFF0000FF);
@@ -334,7 +313,7 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
                 }
                 //blalba
 
-                if(circle==null) {
+                if (circle == null) {
                     CircleOptions circleOptions = new CircleOptions();
                     circleOptions.center(latLng);
                     circleOptions.fillColor(Color.RED);
@@ -347,10 +326,7 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
         }
     }
 
-
-
-    private void initialiserSocketClient()
-    {
+    private void initialiserSocketClient() {
         List<Observer> observerList = new ArrayList<>();
         observerList.add(this);
         //new Thread (new SocketClient(7171,"192.168.43.237", observerList, mapActivity)).start();
@@ -358,8 +334,7 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
 
     @Override
     public void update(Observable observable, Object data) {
-        if(SocketReader.class.equals(observable.getClass()))
-        {
+        if (SocketReader.class.equals(observable.getClass())) {
 
         }
     }
@@ -385,30 +360,13 @@ public class MapEngine implements Observer, GoogleApiClient.ConnectionCallbacks,
 
                         }
                     }
-                } catch(IllegalArgumentException e) {
-                    Log.e(getClass().getName(),"Erreur dans setMockLocation", e);
+                } catch (IllegalArgumentException e) {
+                    Log.e(getClass().getName(), "Erreur dans setMockLocation", e);
                 }
 
             }
         }).start();
 
-    }
-
-    private static Location createTestLocation()
-    {
-        Location location = new Location(LocationManager.GPS_PROVIDER);
-        location.setAccuracy(100);
-        location.setLatitude(48.188035);
-        location.setLongitude(11.584547);
-        location.setTime(System.currentTimeMillis());
-        location.setElapsedRealtimeNanos(System.currentTimeMillis());
-
-        return location;
-    }
-
-    private static boolean isMockSettingOn(Context context)
-    {
-        return !Settings.Secure.getString(context.getContentResolver(), Settings.Secure.ALLOW_MOCK_LOCATION).equals("0");
     }
 
     public void stop()
